@@ -59,7 +59,7 @@ read_options(){
 	   13) Delete_vector_rows;;
 	   14) scrutinize;;
 	   15) exit 0;;
-		*) echo -e "${RED}Error...${STD}" && sleep 2
+	    *) echo -e "${RED}Error...${STD}" && sleep 2
 	esac
 }
  
