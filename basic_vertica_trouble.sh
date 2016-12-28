@@ -44,15 +44,15 @@ read_options(){
 	local choice
 	read -p "Enter choice [ 1 - 15] : " choice
 	case $choice in
-		1) Node_down ;;
-		2) Catalog_Size ;;
-		3) Partition_size;;
-		4) Performance_Vertica;;
-		5) AHM_lag;;
-		6) Disk_utilization;;
-		7) Vertica_System_Information;;
-		8) Running_queries;;
-		9) Top_queries_by_execution_wait_time;;
+	    1) Node_down ;;
+	    2) Catalog_Size ;;
+	    3) Partition_size;;
+	    4) Performance_Vertica;;
+	    5) AHM_lag;;
+	    6) Disk_utilization;;
+	    7) Vertica_System_Information;;
+	    8) Running_queries;;
+	    9) Top_queries_by_execution_wait_time;;
 	   10) Top_queries_by_execution_wait_time_in_last_6_hr;;
 	   11) Resource_Pools_usage;;
 	   12) Locks_checking;;
