@@ -1,9 +1,11 @@
 #!/bin/bash
+
 # A menu driven shell script sample template
 ## ----------------------------------
 # variables
 # ----------------------------------
-echo -e "\n enter password"
+
+echo -e "\nEnter password for database you want to troubleshoot\n"
 read -s -p "PASSWORD: " PASSWORD
 
 EDITOR=vim
@@ -25,7 +27,7 @@ show_menus() {
         echo " 3. Check Partitions which are contributing to large catalog size"
         echo " 4. Performance of vertica per node"
         echo " 5. AHM lag and it's possible reason"
-        echo " 6. Disk_utilization"
+        echo " 6. Disk utilization"
         echo " 7. Vertica System Information"
         echo " 8. Check running Queries in Database"
         echo " 9. Check Queries taking highest execution and queue wait time"
@@ -78,3 +80,4 @@ do
 	show_menus
 	read_options
 done
+
