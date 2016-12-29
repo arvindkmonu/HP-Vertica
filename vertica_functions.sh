@@ -27,9 +27,13 @@ Node_down(){
 
 # Catalog_Size Calculates In-Memory catalog size per node
 Catalog_Size(){
-         echo -e "${V_RED}${V_UNDERLINE}In Memory Catalog Size of database per node-Look for odd Size and Catalog size more than 10 GB${V_RESET}"
-        /opt/vertica/bin/vsql -U dbadmin -w $PASSWORD -c "SELECT node_name, MAX (ts) AS ts, MAX(catalog_size_in_MB) AS catlog_size_in_MB FROM (SELECT node_name,TRUNC((dc_allocation_pool_statistics_by_second."time")::TIMESTAMP,'SS'::VARCHAR(2)) AS ts,SUM((dc_allocation_pool_statistics_by_second.total_memory_max_value - dc_allocation_pool_statistics_by_second.free_memory_min_value))/(1024*1024) AS catalog_size_in_MB from dc_allocation_pool_statistics_by_second GROUP BY 1,TRUNC((dc_allocation_pool_statistics_by_second."time")::TIMESTAMP,'SS'::VARCHAR(2))) subquery_1 GROUP BY 1 ORDER BY 1 LIMIT 50;"
-        pause
+
+echo -e "${V_RED}${V_UNDERLINE}In Memory Catalog Size of database per node-Look for odd Size and Catalog size more than 10 GB${V_RESET}"
+
+/opt/vertica/bin/vsql -U dbadmin -w $PASSWORD -c "SELECT node_name, MAX (ts) AS ts, MAX(catalog_size_in_GB) AS catlog_size_in_GB FROM 
+ (SELECT node_name,TRUNC((dc_allocation_pool_statistics_by_second."time")::TIMESTAMP,'SS'::VARCHAR(2)) AS ts,ROUND(SUM((dc_allocation_pool_statistics_by_second.total_memory_max_value - dc_allocation_pool_statistics_by_second.free_memory_min_value))/(1024*1024*1024),3.0) AS catalog_size_in_GB from dc_allocation_pool_statistics_by_second GROUP BY 1,TRUNC((dc_allocation_pool_statistics_by_second."time")::TIMESTAMP,'SS'::VARCHAR(2))) subquery_1 GROUP BY 1 ORDER BY 1 LIMIT 50"
+        
+pause
 }
 
 
@@ -46,29 +50,24 @@ Performance_Vertica(){
 echo -e "${V_RED}${V_UNDERLINE}Look for nodes which have high thread count and open file handle count relative to other nodes${V_RESET}\n"
 /opt/vertica/bin/vsql -U dbadmin -w $PASSWORD -c "select node_name,sum(thread_count) as thread_count,sum(open_file_handle_count) as open_file_handle_count,sum(memory_inuse_kb)/1000000 as memory_inuse_GB from resource_acquisitions where is_executing ='t' group by node_name order by node_name"
 
-echo -e "${V_RED}${V_UNDERLINE}CPU and Memory Usage per node${V_RESET}\n"
-/opt/vertica/bin/vsql -U dbadmin -w $PASSWORD -c "SELECT node_name, AVG(average_cpu_usage_percent) AS avg_cpu_usage,AVG(average_memory_usage_percent) AS avg_mem_usage FROM v_monitor.system_resource_usage WHERE  end_time BETWEEN NOW() - INTERVAL '6 hours' AND NOW() GROUP  BY node_name order by node_name LIMIT  30;"
+echo -e "${V_RED}${V_UNDERLINE}CPU and Memory Usage per node for last 6 hours${V_RESET}\n"
+/opt/vertica/bin/vsql -U dbadmin -w $PASSWORD -c "SELECT node_name, ROUND(AVG(average_cpu_usage_percent),3.0) AS avg_cpu_usage,ROUND(AVG(average_memory_usage_percent),3.0) AS avg_mem_usage FROM v_monitor.system_resource_usage WHERE  end_time BETWEEN sysdate() - INTERVAL '6 hours' AND sysdate() GROUP  BY node_name order by node_name LIMIT  30"
 
 
-echo -e "${V_RED}${V_UNDERLINE}NETWORK USAGE Per Node${V_RESET}\n"
-/opt/vertica/bin/vsql -U dbadmin -w $PASSWORD -c "SELECT node_name, AVG(net_rx_kbytes_per_second) AS avg_rx_kb_per_second, AVG(net_tx_kbytes_per_second) AS avg_tx_kb_per_second FROM v_monitor.system_resource_usage WHERE  end_time BETWEEN NOW() - INTERVAL '6 hours' AND NOW() GROUP  BY node_name order by node_name LIMIT  30;"
+echo -e "${V_RED}${V_UNDERLINE}NETWORK USAGE Per Node for last 6 hours${V_RESET}\n"
+/opt/vertica/bin/vsql -U dbadmin -w $PASSWORD -c "SELECT node_name, ROUND(AVG(net_rx_kbytes_per_second),3.0) AS avg_rx_kb_per_second, ROUND(AVG(net_tx_kbytes_per_second),3.0) AS avg_tx_kb_per_second FROM v_monitor.system_resource_usage WHERE end_time BETWEEN sysdate() - INTERVAL '6 hours' AND sysdate() GROUP  BY node_name order by node_name LIMIT  30"
 
 
-echo -e "${V_RED}${V_UNDERLINE}Disk IO usage Per Node${V_RESET}"
-/opt/vertica/bin/vsql -U dbadmin -w $PASSWORD -c "SELECT node_name, AVG(io_read_kbytes_per_second) AS avg_io_read_kb_per_second,AVG(io_written_kbytes_per_second) AS avg_io_written_kbytes_per_second FROM   v_monitor.system_resource_usage WHERE  end_time BETWEEN NOW() - INTERVAL '6 hours' AND NOW() GROUP  BY node_name order by node_name LIMIT 30;"
+echo -e "${V_RED}${V_UNDERLINE}Disk IO usage Per Node for last 6 hours${V_RESET}"
+
+/opt/vertica/bin/vsql -U dbadmin -w $PASSWORD -c "SELECT node_name, ROUND(AVG(io_read_kbytes_per_second),3.0) AS avg_io_read_kb_per_second,ROUND(AVG(io_written_kbytes_per_second),3.0) AS avg_io_written_kbytes_per_second FROM v_monitor.system_resource_usage WHERE  end_time BETWEEN sysdate() - INTERVAL '6 hours' AND sysdate() GROUP  BY node_name order by node_name LIMIT 30"
 
 pause
 
 }
-
-
-
 AHM_lag(){
-
 echo -e "${V_RED}${V_UNDERLINE}AHM lag${V_RESET}\n" 
 /opt/vertica/bin/vsql -U dbadmin -w $PASSWORD -c "select current_epoch,ahm_epoch,last_good_epoch,last_good_epoch - ahm_epoch ahm_lag from system;"
-
-
 
 echo -e "${V_RED}${V_UNDERLINE}Refresh below unrefreshed projections if any ${V_RESET}\n"
 /opt/vertica/bin/vsql -U dbadmin -w $PASSWORD -c "select projection_schema,projection_name,owner_name,anchor_table_name,is_up_to_date,has_statistics from projections where not is_up_to_date;"
@@ -80,19 +79,18 @@ pause
 }
 
 
-
 Disk_utilization(){
 
 echo -e "${V_RED}${V_UNDERLINE}Catalog Size per node if Catalog disk usage is more than 80 Percentage${V_RESET}\n"
-/opt/vertica/bin/vsql -U dbadmin -w $PASSWORD -c "select node_name,storage_path,disk_space_free_mb,disk_space_used_mb,disk_space_free_percent from disk_storage where storage_usage = 'CATALOG' and TRIM(TRAILING '%' from disk_space_free_percent) < 20"
+/opt/vertica/bin/vsql -U dbadmin -w $PASSWORD -c "select node_name,storage_path,round((disk_space_free_mb/1024),3.0) as disk_space_free_gb,round((disk_space_used_mb/1024),3.0) as disk_space_used_gb,(100 - (TRIM(TRAILING '%' from disk_space_free_percent)::integer)) as disk_space_used_percent from disk_storage where storage_usage ilike '%CATALOG%'"
 
 
 echo -e "${V_RED}${V_UNDERLINE}Data Size per node if Data disk usage is more than 80 Percentage${V_RESET}\n"
-/opt/vertica/bin/vsql -U dbadmin -w $PASSWORD -c "select node_name,storage_path,disk_space_free_mb,disk_space_used_mb,disk_space_free_percent from disk_storage where storage_usage ilike  '%DATA%' and TRIM(TRAILING '%' from disk_space_free_percent) < 20"
+/opt/vertica/bin/vsql -U dbadmin -w $PASSWORD -c "select node_name,storage_path,round((disk_space_free_mb/1024),3.0) as disk_space_free_gb,round((disk_space_used_mb/1024),3.0) as disk_space_used_gb,(100 - (TRIM(TRAILING '%' from disk_space_free_percent)::integer)) as disk_space_used_percent from disk_storage where storage_usage ilike '%DATA%'"
 
 echo -e "${V_RED}${V_UNDERLINE}Ask Application team to archive old data of below table${V_RESET}\n"
 
-/opt/vertica/bin/vsql -U dbadmin -w $PASSWORD -c "select PROJECTION_SCHEMA,anchor_table_name,sum(used_bytes)/(1024*1024*1024) table_size_in_Gb from projection_storage group by PROJECTION_SCHEMA,anchor_table_name order by table_size_in_Gb desc limit 10"
+/opt/vertica/bin/vsql -U dbadmin -w $PASSWORD -c "select PROJECTION_SCHEMA,anchor_table_name,round((sum(used_bytes)/(1024*1024*1024)),3.0) table_size_in_gb from projection_storage group by PROJECTION_SCHEMA,anchor_table_name order by table_size_in_Gb desc limit 10"
 
 pause
 }
